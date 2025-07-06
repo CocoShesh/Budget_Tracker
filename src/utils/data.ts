@@ -32,4 +32,5 @@ export const philippineBanks = [
   "China Banking Corporation (Chinabank)",
   "Asia United Bank (AUB)",
   "Sterling Bank of Asia",
+  "Robinsons Bank"
 ]
