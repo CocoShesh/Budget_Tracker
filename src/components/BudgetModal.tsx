@@ -17,6 +17,8 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
       return
     }
     onSubmit(category, Number.parseFloat(limit))
+     setCategory("")
+    setLimit("")
   }
 
   return (

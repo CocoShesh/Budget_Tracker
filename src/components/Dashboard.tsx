@@ -1,13 +1,11 @@
 "use client"
 import { useState, useEffect } from "react"
-
 import DeleteConfirmationModal from "./DeleteConfirmationModal"
 import EditTransactionModal from "./EditTransactionModal"
 import EditAccountModal from "./EditAccountModal"
 import EditBudgetModal from "./EditBudgetModal"
 import MonthlyResetModal from "./MonthlyResetModal"
 import MonthlyHistoryModal from "./MonthlyHistoryModal"
-
 import { MonthlyStorageManager, type MonthlyData } from "../utils/MonthlyStorage"
 import type { Account, Budget, DashboardProps, DeleteModalState, ModalState, Transaction } from "../utils/type"
 
@@ -51,7 +49,6 @@ function Dashboard({
 
   const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0)
   const currentMonth = new Date().getMonth()
-
   const monthlyBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0)
   const totalBudgetSpent = budgets.reduce((sum, budget) => sum + budget.spent, 0)
   const remainingBudget = monthlyBudget - totalBudgetSpent
@@ -67,6 +64,7 @@ function Dashboard({
   const hasAccounts = accounts.length > 0
   const hasTransactions = transactions.length > 0
   const hasBudgets = budgets.length > 0
+  const hasHistoryData = monthlyHistoryData.length > 0
 
   const canDeleteAccount = (accountId: string) => {
     return !transactions.some((t) => t.accountId === accountId)
@@ -127,7 +125,6 @@ function Dashboard({
 
     if (transaction.type === "expense") {
       if (transaction.hasBudget) {
- 
         setBudgets((prev) =>
           prev.map((budget) =>
             budget.category === transaction.category ? { ...budget, spent: budget.spent + transaction.amount } : budget,
@@ -221,7 +218,6 @@ function Dashboard({
 
       if (updatedTransaction.type === "expense") {
         if (updatedTransaction.hasBudget) {
-          // Update budget spending
           setBudgets((prev) =>
             prev.map((budget) =>
               budget.category === updatedTransaction.category
@@ -286,14 +282,10 @@ function Dashboard({
   const handleMonthlyReset = () => {
     if (pendingMonthlyData) {
       MonthlyStorageManager.saveMonthlyData(pendingMonthlyData)
-
       setTransactions([])
-      setBudgets((prev) => prev.map((budget) => ({ ...budget, spent: 0 }))) // Reset budget spending
-
+      setBudgets((prev) => prev.map((budget) => ({ ...budget, spent: 0 })))
       MonthlyStorageManager.setStoredMonth(MonthlyStorageManager.getCurrentMonth())
-
       setMonthlyHistoryData(MonthlyStorageManager.getAllMonthlyData())
-
       setShowMonthlyReset(false)
       setPendingMonthlyData(null)
     }
@@ -310,9 +302,7 @@ function Dashboard({
         const storedMonth = MonthlyStorageManager.getStoredMonth()
         if (storedMonth && (transactions.length > 0 || budgets.length > 0)) {
           const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0)
-
           const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0)
-
           const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.limit, 0)
           const totalBudgetSpent = budgets.reduce((sum, b) => sum + b.spent, 0)
           const budgetUtilization = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit) * 100 : 0
@@ -336,15 +326,13 @@ function Dashboard({
           MonthlyStorageManager.setStoredMonth(MonthlyStorageManager.getCurrentMonth())
         }
       }
-
       setMonthlyHistoryData(MonthlyStorageManager.getAllMonthlyData())
     }
 
     checkForNewMonth()
-
     const interval = setInterval(checkForNewMonth, 60 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [transactions, budgets, accounts])
+  }, [transactions, budgets, accounts, totalBalance])
 
   return (
     <div className="w-full xl:mx-10 p-4 space-y-6 mt-5">
@@ -358,7 +346,7 @@ function Dashboard({
             <button
               onClick={() => hasAccounts && onOpenModal("transaction")}
               disabled={!hasAccounts}
-              className={`px-4 py-2 rounded-lg  mb-transition-colors ${
+              className={`px-4 py-2 rounded-lg transition-colors ${
                 hasAccounts
                   ? "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -366,12 +354,6 @@ function Dashboard({
             >
               Add Expense
             </button>
-            {/* {!hasAccounts && (
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2  px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap z-10">
-                Create an account first to add expenses
-                <div className="absolute bottom-full  left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-              </div>
-            )} */}
           </div>
           <button
             onClick={() => onOpenModal("account")}
@@ -391,12 +373,6 @@ function Dashboard({
             >
               Set Budget
             </button>
-            {/* {!hasAccounts && (
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg whitespace-nowrap z-10">
-                Create an account first to set budgets
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-              </div>
-            )} */}
           </div>
           <div className="relative group">
             <button
@@ -418,13 +394,13 @@ function Dashboard({
             )}
           </div>
           <button
-            onClick={() => !monthlyHistoryData && setShowMonthlyHistory(true)} 
-              disabled={!monthlyHistoryData }
-             className={`px-4 py-2 rounded-lg  mb-transition-colors ${
-                !monthlyHistoryData 
-                  ?  "bg-blue-600 text-white cursor-pointer hover:bg-blue-700"
-                  :   "bg-gray-300 text-gray-500 cursor-not-allowed" 
-              }`}
+            onClick={() => hasHistoryData && setShowMonthlyHistory(true)}
+            disabled={!hasHistoryData}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              hasHistoryData
+                ? "bg-purple-600 text-white cursor-pointer hover:bg-purple-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
           >
             View History
           </button>
@@ -454,30 +430,31 @@ function Dashboard({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-600">Total Balance</p>
-                <p className={`text-2xl sm:text-3xl font-bold mt-1 break-words ${totalBalance >= 0 ? "text-blue-600" : "text-red-600"}`}>
-                  ₱{formatPHP(totalBalance)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Across all accounts</p>
-              </div>
-              <div
-                className={`${totalBalance >= 0 ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"} p-3 rounded-full flex items-center justify-center shrink-0`}
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-600">Total Balance</p>
+              <p
+                className={`text-2xl sm:text-3xl font-bold mt-1 break-words ${totalBalance >= 0 ? "text-blue-600" : "text-red-600"}`}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                  />
-                </svg>
-              </div>
+                ₱{formatPHP(totalBalance)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Across all accounts</p>
             </div>
-      </div>
-
+            <div
+              className={`${totalBalance >= 0 ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"} p-3 rounded-full flex items-center justify-center shrink-0`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
@@ -603,7 +580,6 @@ function Dashboard({
                         ₱{formatPHP(Math.abs(account.balance))}
                       </p>
                     </div>
-                    {/* Edit/Delete Actions */}
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleOpenModal("editaccount", account)}
@@ -706,7 +682,6 @@ function Dashboard({
                         <span className="text-sm text-gray-500">
                           ₱{formatPHP(budget.spent)} / ₱{formatPHP(budget.limit)}
                         </span>
-                        {/* Edit/Delete Actions for Budget */}
                         <div className="flex items-center space-x-1">
                           <button
                             onClick={() => handleOpenModal("budget", budget)}
@@ -894,7 +869,6 @@ function Dashboard({
                       <div className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString()}</div>
                     </div>
                   </div>
-
                   <div className="hidden sm:flex sm:items-center sm:justify-between">
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div
@@ -1013,6 +987,7 @@ function Dashboard({
         onClose={closeEditModal}
         onUpdate={handleUpdateAccount}
         account={editModal.data}
+        accounts={accounts}
       />
 
       <EditBudgetModal
@@ -1020,6 +995,7 @@ function Dashboard({
         onClose={closeEditModal}
         onUpdate={handleUpdateBudget}
         budget={editModal.data}
+        budgets={budgets}
       />
 
       {showMonthlyReset && pendingMonthlyData && (

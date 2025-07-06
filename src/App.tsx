@@ -39,7 +39,6 @@ function App() {
   const [activeModal, setActiveModal] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load data from localStorage on component mount
   useEffect(() => {
     try {
       const savedTransactions = localStorage.getItem("transactions")
@@ -76,7 +75,6 @@ function App() {
       if (savedAccounts) {
         setAccounts(JSON.parse(savedAccounts))
       } else {
-        // Add sample account if none exists
         const sampleAccounts: Account[] = [
           {
             id: "1",
@@ -107,7 +105,6 @@ function App() {
     }
   }, [])
 
-  // Save transactions to localStorage whenever transactions change
   useEffect(() => {
     if (isLoaded) {
       try {
@@ -118,7 +115,6 @@ function App() {
     }
   }, [transactions, isLoaded])
 
-  // Save accounts to localStorage whenever accounts change
   useEffect(() => {
     if (isLoaded) {
       try {
@@ -129,7 +125,6 @@ function App() {
     }
   }, [accounts, isLoaded])
 
-  // Save budgets to localStorage whenever budgets change
   useEffect(() => {
     if (isLoaded) {
       try {
@@ -140,26 +135,21 @@ function App() {
     }
   }, [budgets, isLoaded])
 
-  // Updated addTransaction with smart budget logic
   const addTransaction = (transaction: Omit<Transaction, "id"> & { hasBudget: boolean }) => {
     const newTransaction = {
       ...transaction,
       id: Date.now().toString(),
     }
-
-    // Add transaction to list
     setTransactions((prev) => [newTransaction, ...prev])
 
     if (transaction.type === "expense") {
       if (transaction.hasBudget) {
-        // If expense has a matching budget, update the budget's spent amount
         setBudgets((prev) =>
           prev.map((budget) =>
             budget.category === transaction.category ? { ...budget, spent: budget.spent + transaction.amount } : budget,
           ),
         )
       } else {
-        // If no budget, deduct directly from account balance
         setAccounts((prev) =>
           prev.map((account) =>
             account.id === transaction.accountId
@@ -169,7 +159,6 @@ function App() {
         )
       }
     } else if (transaction.type === "income") {
-      // Income always goes to account balance
       setAccounts((prev) =>
         prev.map((account) =>
           account.id === transaction.accountId
@@ -178,7 +167,6 @@ function App() {
         ),
       )
     }
-
     setActiveModal(null)
   }
 
@@ -222,13 +210,11 @@ function App() {
     }
   }
 
-  // Updated handleDeleteTransaction with smart budget logic
   const handleDeleteTransaction = (id: string) => {
     const transaction = transactions.find((t) => t.id === id)
     if (transaction) {
       if (transaction.type === "expense") {
         if (transaction.hasBudget) {
-          // If expense had a budget, reduce the budget's spent amount
           setBudgets((prev) =>
             prev.map((budget) =>
               budget.category === transaction.category
@@ -237,7 +223,6 @@ function App() {
             ),
           )
         } else {
-          // If no budget, add back to account balance
           setAccounts((prev) =>
             prev.map((account) =>
               account.id === transaction.accountId
@@ -247,7 +232,6 @@ function App() {
           )
         }
       } else if (transaction.type === "income") {
-        // Remove income from account balance
         setAccounts((prev) =>
           prev.map((account) =>
             account.id === transaction.accountId
@@ -298,13 +282,15 @@ function App() {
       {activeModal === "transaction" && (
         <TransactionModal
           accounts={accounts}
-          budgets={budgets} // Added budgets prop
+          budgets={budgets}
           onSubmit={addTransaction}
           onClose={() => setActiveModal(null)}
         />
       )}
 
-      {activeModal === "account" && <AccountModal onSubmit={addAccount} onClose={() => setActiveModal(null)} />}
+      {activeModal === "account" && (
+        <AccountModal accounts={accounts} onSubmit={addAccount} onClose={() => setActiveModal(null)} />
+      )}
 
       {activeModal === "budget" && (
         <BudgetModal budgets={budgets} onSubmit={setBudget} onClose={() => setActiveModal(null)} />
