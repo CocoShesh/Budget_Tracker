@@ -1,0 +1,4 @@
+# Native tooling required by Vite and Tailwind; other dependency scripts stay blocked.
+allowBuilds:
+  "@tailwindcss/oxide": true
+  esbuild: true

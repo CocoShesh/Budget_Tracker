@@ -1,4 +1,3 @@
-"use client"
 
 import type React from "react"
 
@@ -30,7 +29,7 @@ export function TransactionForm({ accounts, onSubmit, onClose }: TransactionForm
       category,
       description,
       date,
-      account_id: accountId,
+      accountId: accountId,
     })
   }
 

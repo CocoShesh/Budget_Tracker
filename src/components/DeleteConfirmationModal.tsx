@@ -1,4 +1,3 @@
-"use client"
 
 import type { DeleteConfirmationModalProps } from "../utils/type"
 
@@ -32,7 +31,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, itemType }: Delet
         </div>
 
         <p className="text-gray-700 mb-6">
-          Are you sure you want to delete 
+          Are you sure you want to delete
         </p>
 
         <div className="flex justify-end space-x-3">
