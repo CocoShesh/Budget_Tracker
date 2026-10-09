@@ -1,6 +1,24 @@
-# Tipid Track · Budget Tracker
+# Tipid Track
 
-A browser-local Philippine peso budget tracker built with React, TypeScript, Vite, and Tailwind CSS. Manage accounts, record income and expenses, set monthly category limits, and review past months without signing in.
+**Keep track of your money, one transaction at a time.**
+
+Tipid Track is a personal budget tracker for Philippine pesos. Organize your accounts, record income and expenses, and see how your spending compares with monthly category budgets—all in your browser.
+
+[Open Tipid Track](https://tipidtrack.netlify.app/) · [Report a bug](https://github.com/CocoShesh/Budget_Tracker/issues) · [Contributing](CONTRIBUTING.md)
+
+## Features
+
+- **Account tracking:** manage cash, bank, and other account balances with consistent transaction calculations.
+- **Income and expenses:** add, edit, and delete dated records with categories and descriptions.
+- **Monthly budgets and history:** monitor category spending and review previous months without automatic resets.
+- **Find your transactions:** search descriptions, categories, or accounts; filter by month, type, and account.
+- **Responsive, local-first experience:** desktop and mobile layouts, keyboard-accessible forms, JSON backup/import, and recovery for invalid saved data.
+
+## Built with
+
+React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Lucide icons
+
+No sign-in or API key is required. Records are saved on the device and browser you use. Export a backup before moving to another device.
 
 ## Run locally
 
@@ -66,3 +84,7 @@ src/utils/currency.ts        Philippine peso formatting
 tests/ledger.test.mjs        Regression tests without extra test dependencies
 .github/workflows/ci.yml     Frozen-lockfile verification
 ```
+
+## Contributing
+
+Bug reports and practical improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and required checks. For a bug report, include the steps to reproduce it and your browser version; use synthetic examples instead of sharing financial records.
