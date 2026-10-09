@@ -1,63 +1,61 @@
-import type { MonthlyData } from "./MonthlyStorage"
+import type { MonthlyData } from "./MonthlyStorage";
 export interface Account {
-  id: string
-  name: string
-  type: string
-  balance: number
-  color: string
-  bankName?: string
-  bank_name?:string
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
+  color: string;
+  bankName?: string;
+  bank_name?: string;
 }
 
 export interface Budget {
-  id: string
-  category: string
-  limit: number
-  spent: number
+  id: string;
+  category: string;
+  limit: number;
+  spent: number;
 }
 
 export interface BudgetsListProps {
-  budgets: Budget[]
+  budgets: Budget[];
 }
 
 export interface DeleteConfirmationModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  itemName: string
-  itemType: string
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemName: string;
+  itemType: string;
 }
 
-
 export interface BudgetModalProps {
-  budgets: Budget[] 
-  onSubmit: (category: string, limit: number) => void
-  onClose: () => void
+  budgets: Budget[];
+  onSubmit: (category: string, limit: number) => void;
+  onClose: () => void;
 }
 
 export interface MonthlyResetModalProps {
-  isOpen: boolean
-  onConfirm: () => void
-  onClose: () => void
-  previousMonthData: MonthlyData
+  isOpen: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+  previousMonthData: MonthlyData;
 }
 export interface Transaction {
-  id: string
-  type: "income" | "expense"
-  amount: number
-  category: string
-  description: string
-  date: string
-  accountId: string
-  hasBudget?: boolean
+  id: string;
+  type: "income" | "expense";
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+  accountId: string;
+  hasBudget?: boolean;
 }
 
-
 export interface EditAccountModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onUpdate: (account: Account) => void
-  account?: Account
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (account: Account) => void;
+  account?: Account;
 }
 
 export const accountTypes = [
@@ -66,7 +64,7 @@ export const accountTypes = [
   { value: "credit", label: "Credit Card" },
   { value: "investment", label: "Investment" },
   { value: "cash", label: "Cash" },
-]
+];
 
 export const colorOptions = [
   { value: "bg-blue-500", label: "Blue", class: "bg-blue-500" },
@@ -77,25 +75,21 @@ export const colorOptions = [
   { value: "bg-pink-500", label: "Pink", class: "bg-pink-500" },
   { value: "bg-indigo-500", label: "Indigo", class: "bg-indigo-500" },
   { value: "bg-gray-500", label: "Gray", class: "bg-gray-500" },
-]
-
-
-
+];
 
 export interface StatsCardsProps {
-  transactions: Transactions[]
-  accounts: Account[]
-  budgets: Budget[]
+  transactions: Transactions[];
+  accounts: Account[];
+  budgets: Budget[];
 }
-
 
 export interface TransactionFormProps {
-  accounts: Account[]
-  onSubmit: (transaction: any) => void
-  onClose: () => void
+  accounts: Account[];
+  onSubmit: (transaction: Omit<Transaction, "id">) => void;
+  onClose: () => void;
 }
 
-export const expenseCategories = [
+export const oldExpenseCategories = [
   "Food",
   "Transportation",
   "Entertainment",
@@ -105,17 +99,16 @@ export const expenseCategories = [
   "Education",
   "Travel",
   "Other",
-]
-
+];
 
 export interface EditBudgetModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onUpdate: (budget: Budget) => void
-  budget?: Budget
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (budget: Budget) => void;
+  budget?: Budget;
 }
 
-export const budgetCategories = [
+export const oldBudgetCategories = [
   "Food",
   "Transportation",
   "Housing",
@@ -130,94 +123,93 @@ export const budgetCategories = [
   "Travel",
   "Subscriptions",
   "Other",
-]
-
-
+];
 
 export interface TransactionModalProps {
-  accounts: Account[]
-  budgets: Budget[]
+  accounts: Account[];
+  budgets: Budget[];
   onSubmit: (transaction: {
-    type: "expense"
-    amount: number
-    category: string
-    description: string
-    date: string
-    accountId: string
-    hasBudget: boolean 
-  }) => void
-  onClose: () => void
+    type: "income" | "expense";
+    amount: number;
+    category: string;
+    description: string;
+    date: string;
+    accountId: string;
+    hasBudget: boolean;
+  }) => void;
+  onClose: () => void;
 }
 
-
-
-
 export interface Transactions {
-  id: string
-  type: "income" | "expense"
-  amount: number
-  category: string
-  description: string
-  date: string
-  accountId: string
+  id: string;
+  type: "income" | "expense";
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+  accountId: string;
 }
 
 export interface MonthlyHistoryModalProps {
-  isOpen: boolean
-  onClose: () => void
-  monthlyData: MonthlyData[]
-  onDeleteMonth: (month: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  monthlyData: MonthlyData[];
+  onDeleteMonth: (month: string) => void;
 }
 
 export interface EditTransactionModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onUpdate: (transaction: Transactions) => void
-  transaction?: Transaction
-  accounts: Account[]
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (transaction: Transactions) => void;
+  transaction?: Transaction;
+  accounts: Account[];
 }
-
 
 export interface ExpenseChartProps {
-  transactions: Transaction[]
+  transactions: Transaction[];
 }
 
-export const incomeCategories = ["Salary", "Freelance", "Business", "Investment", "Gift", "Other Income"]
-
+export const incomeCategories = [
+  "Salary",
+  "Freelance",
+  "Business",
+  "Investment",
+  "Gift",
+  "Other Income",
+];
 
 export interface TransactionListProps {
-  transactions: Transactions[]
-  accounts: Account[]
-  showSearch?: boolean
+  transactions: Transactions[];
+  accounts: Account[];
+  showSearch?: boolean;
 }
 
-
-
 export interface DashboardProps {
-  transactions: Transaction[]
-  accounts: Account[]
-  budgets: Budget[]
-  onOpenModal: (modal: string, data?: any) => void
-  onClearData: () => void
-  onDeleteTransaction: (id: string) => void
-  onDeleteAccount: (id: string) => void
-  onDeleteBudget: (id: string) => void
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>
-  setAccounts: React.Dispatch<React.SetStateAction<Account[]>>
-  setBudgets: React.Dispatch<React.SetStateAction<Budget[]>>
+  transactions: Transaction[];
+  accounts: Account[];
+  budgets: Budget[];
+  onOpenModal: (modal: string) => void;
+  onClearData: () => void;
+  onDeleteTransaction: (id: string) => void;
+  onDeleteAccount: (id: string) => void;
+  onDeleteBudget: (id: string) => void;
+  onUpdateTransaction: (transaction: Transaction) => void;
+  onUpdateAccount: (account: Account) => void;
+  onUpdateBudget: (budget: Budget) => void;
+  history: MonthlyData[];
 }
 
 export interface DeleteModalState {
-  isOpen: boolean
-  type: string
-  id: string
-  name: string
+  isOpen: boolean;
+  type: string;
+  id: string;
+  name: string;
 }
 
 export interface ModalState {
-  isOpen: boolean
-  type: string
-  data?: any
+  isOpen: boolean;
+  type: string;
+  data?: Account | Budget | Transaction;
 }
 
 export const categories = [
@@ -232,27 +224,30 @@ export const categories = [
   "Gas & Fuel",
   "Personal Care",
   "Other",
-]
+];
 
 export interface AccountsListProps {
-  accounts: Account[]
+  accounts: Account[];
 }
 
 export interface AccountModalProps {
-  onSubmit: (account: any) => void
-  onClose: () => void
+  onSubmit: (account: Omit<Account, "id">) => void;
+  onClose: () => void;
 }
 
 export interface AccountFormProps {
-  onSubmit: (account: any) => void
-  onClose: () => void
+  onSubmit: (account: Omit<Account, "id">) => void;
+  onClose: () => void;
 }
 
 export interface BankSummaryProps {
-  accounts: Account[]
+  accounts: Account[];
 }
 
 export interface BudgetFormProps {
-  onSubmit: (category: string, limit: number) => void
-  onClose: () => void
+  onSubmit: (category: string, limit: number) => void;
+  onClose: () => void;
 }
+
+export const expenseCategories = categories;
+export const budgetCategories = categories;

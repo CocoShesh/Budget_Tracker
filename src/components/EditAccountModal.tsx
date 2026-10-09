@@ -1,25 +1,31 @@
-"use client"
-import type React from "react"
-import { useState, useEffect } from "react"
-import { accountTypes, colors, philippineBanks } from "../utils/data"
-import type { Account } from "../utils/type"
+import Dialog from "./Dialog";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { accountTypes, colors, philippineBanks } from "../utils/data";
+import type { Account } from "../utils/type";
 
 interface EditAccountModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onUpdate: (account: Account) => void
-  account?: Account
-  accounts: Account[] 
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (account: Account) => void;
+  account?: Account;
+  accounts: Account[];
 }
-function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: EditAccountModalProps) {
+function EditAccountModal({
+  isOpen,
+  onClose,
+  onUpdate,
+  account,
+  accounts,
+}: EditAccountModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     type: "checking",
     balance: 0,
     color: "bg-blue-500",
     bankName: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (account) {
@@ -29,37 +35,38 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
         balance: account.balance,
         color: account.color,
         bankName: account.bankName || "",
-      })
+      });
     } else {
       setFormData({
         name: "",
         type: "checking",
-        balance:0,
+        balance: 0,
         color: "bg-blue-500",
         bankName: "",
-      })
+      });
     }
-    setErrors({})
-  }, [account])
+    setErrors({});
+  }, [account]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newErrors: Record<string, string> = {}
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Account name is required"
+      newErrors.name = "Account name is required";
     }
 
     if (formData.name.trim()) {
       const isDuplicate = accounts.some(
         (existingAccount) =>
-          existingAccount.name.toLowerCase() === formData.name.trim().toLowerCase() &&
-          existingAccount.id !== account?.id, 
-      )
+          existingAccount.name.toLowerCase() ===
+            formData.name.trim().toLowerCase() &&
+          existingAccount.id !== account?.id,
+      );
       if (isDuplicate) {
-        newErrors.name = "An account with this name already exists"
+        newErrors.name = "An account with this name already exists";
       }
     }
 
@@ -68,34 +75,42 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
         (existingAccount) =>
           existingAccount.bankName === formData.bankName &&
           existingAccount.type === formData.type &&
-          existingAccount.id !== account?.id, 
-      )
+          existingAccount.id !== account?.id,
+      );
       if (isDuplicateBankType) {
-        newErrors.bankName = `You already have a ${formData.type} account with ${formData.bankName}`
+        newErrors.bankName = `You already have a ${formData.type} account with ${formData.bankName}`;
       }
     }
 
-    if (!formData.balance) {
-      newErrors.balance = "Balance is required"
+    if (!Number.isFinite(Number(formData.balance))) {
+      newErrors.balance = "Balance is required";
     } else {
-      const balanceValue = Number.parseFloat(formData.balance.toString())
+      const balanceValue = Number.parseFloat(formData.balance.toString());
       if (isNaN(balanceValue)) {
-        newErrors.balance = "Please enter a valid amount"
+        newErrors.balance = "Please enter a valid amount";
       }
     }
 
-    setErrors(newErrors)
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
       const updatedAccount: Account = {
-        id: account?.id || Date.now().toString(),
+        id: account?.id || crypto.randomUUID(),
         name: formData.name.trim(),
         type: formData.type,
         balance: Number.parseFloat(formData.balance.toString()),
         color: formData.color,
         bankName: formData.bankName.trim() || undefined,
+      };
+      try {
+        onUpdate(updatedAccount);
+      } catch (error) {
+        setErrors({
+          name:
+            error instanceof Error ? error.message : "Unable to save account.",
+        });
+        return;
       }
-      onUpdate(updatedAccount)
 
       if (!account) {
         setFormData({
@@ -104,40 +119,57 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
           balance: 0,
           color: "bg-blue-500",
           bankName: "",
-        })
-        setErrors({})
+        });
+        setErrors({});
       }
     }
-  }
+  };
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-  }
+  };
 
-  const existingAccountNames = accounts.filter((acc) => acc.id !== account?.id).map((acc) => acc.name)
+  const existingAccountNames = accounts
+    .filter((acc) => acc.id !== account?.id)
+    .map((acc) => acc.name);
   const existingBankAccounts = accounts
     .filter((acc) => acc.bankName && acc.id !== account?.id)
-    .map((acc) => `${acc.bankName} (${acc.type})`)
+    .map((acc) => `${acc.bankName} (${acc.type})`);
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <Dialog title="Edit Account" onClose={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{account ? "Edit Account" : "Add Account"}</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {account ? "Edit Account" : "Add Account"}
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {account ? "Update your account details" : "Create a new account to track your finances"}
+              {account
+                ? "Update your account details"
+                : "Create a new account to track your finances"}
             </p>
           </div>
           <button
+            aria-label="Close edit account form"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -158,12 +190,18 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
               }`}
               required
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            <p className="text-xs text-gray-500 mt-1">Choose a unique name to identify this account</p>
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Choose a unique name to identify this account
+            </p>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Bank Name
+            </label>
             <select
               value={formData.bankName}
               onChange={(e) => handleChange("bankName", e.target.value)}
@@ -178,8 +216,12 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                 </option>
               ))}
             </select>
-            {errors.bankName && <p className="text-red-500 text-sm mt-1">{errors.bankName}</p>}
-            <p className="text-xs text-gray-500 mt-1">Optional: Select your bank for better organization</p>
+            {errors.bankName && (
+              <p className="text-red-500 text-sm mt-1">{errors.bankName}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Optional: Select your bank for better organization
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -206,7 +248,9 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                  ₱
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -219,12 +263,16 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                   required
                 />
               </div>
-              {errors.balance && <p className="text-red-500 text-sm mt-1">{errors.balance}</p>}
+              {errors.balance && (
+                <p className="text-red-500 text-sm mt-1">{errors.balance}</p>
+              )}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Color Theme</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Color Theme
+            </label>
             <div className="flex flex-wrap gap-3 mt-2">
               {colors.map((colorOption) => (
                 <button
@@ -235,12 +283,16 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                       ? "ring-4 ring-offset-2 ring-gray-400 scale-110"
                       : "hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-gray-300"
                   }`}
-                  onClick={() => setFormData((prev) => ({ ...prev, color: colorOption }))}
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, color: colorOption }))
+                  }
                   title={`Select ${colorOption.replace("bg-", "").replace("-500", "")} color`}
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Choose a color to easily identify this account</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Choose a color to easily identify this account
+            </p>
           </div>
 
           {/* Show existing accounts info (excluding current account) */}
@@ -261,11 +313,15 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                   />
                 </svg>
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">Other Accounts</h4>
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    Other Accounts
+                  </h4>
                   <div className="space-y-2">
                     {existingAccountNames.length > 0 && (
                       <div>
-                        <p className="text-xs text-blue-700 mb-1">Account names:</p>
+                        <p className="text-xs text-blue-700 mb-1">
+                          Account names:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {existingAccountNames.map((accountName) => (
                             <span
@@ -280,7 +336,9 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                     )}
                     {existingBankAccounts.length > 0 && (
                       <div>
-                        <p className="text-xs text-blue-700 mb-1">Bank accounts:</p>
+                        <p className="text-xs text-blue-700 mb-1">
+                          Bank accounts:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {existingBankAccounts.map((bankAccount) => (
                             <span
@@ -299,22 +357,34 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
             </div>
           )}
 
-          {formData.name && formData.balance && !isNaN(Number.parseFloat(formData.balance.toString())) && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-green-900 mb-2">Preview</h4>
-              <div className="flex items-center space-x-3">
-                <div className={`w-4 h-4 rounded-full ${formData.color}`} />
-                <div className="flex-1">
-                  <p className="font-medium text-green-900">{formData.name}</p>
-                  <p className="text-sm text-green-700">
-                    {formData.bankName && `${formData.bankName} • `}
-                    {accountTypes.find((t) => t.value === formData.type)?.label} • ₱
-                    {Number.parseFloat(formData.balance.toString()).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                  </p>
+          {formData.name &&
+            formData.balance &&
+            !isNaN(Number.parseFloat(formData.balance.toString())) && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-green-900 mb-2">
+                  Preview
+                </h4>
+                <div className="flex items-center space-x-3">
+                  <div className={`w-4 h-4 rounded-full ${formData.color}`} />
+                  <div className="flex-1">
+                    <p className="font-medium text-green-900">
+                      {formData.name}
+                    </p>
+                    <p className="text-sm text-green-700">
+                      {formData.bankName && `${formData.bankName} • `}
+                      {
+                        accountTypes.find((t) => t.value === formData.type)
+                          ?.label
+                      }{" "}
+                      • ₱
+                      {Number.parseFloat(
+                        formData.balance.toString(),
+                      ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-start">
@@ -332,7 +402,9 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
                 />
               </svg>
               <div>
-                <h4 className="text-sm font-medium text-green-900">Account Tip</h4>
+                <h4 className="text-sm font-medium text-green-900">
+                  Account Tip
+                </h4>
                 <p className="text-sm text-green-700 mt-1">
                   {account
                     ? "Updating account details will not affect your transaction history."
@@ -352,7 +424,11 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
             </button>
             <button
               type="submit"
-              disabled={!formData.name.trim() || !formData.balance || Object.keys(errors).length > 0}
+              disabled={
+                !formData.name.trim() ||
+                !Number.isFinite(Number(formData.balance)) ||
+                Object.keys(errors).length > 0
+              }
               className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {account ? "Update Account" : "Add Account"}
@@ -360,9 +436,8 @@ function EditAccountModal({ isOpen, onClose, onUpdate, account, accounts }: Edit
           </div>
         </form>
       </div>
-    </div>
-  )
+    </Dialog>
+  );
 }
 
-export default EditAccountModal
-    
+export default EditAccountModal;

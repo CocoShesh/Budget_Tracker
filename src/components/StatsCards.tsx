@@ -14,11 +14,11 @@ const StatsCards = ({ transactions, accounts, budgets }:StatsCardsProps) => {
 
   const currentMonth = new Date().getMonth()
   const monthlyIncome = transactions
-    .filter((t) => t.type === "income" && new Date(t.date).getMonth() === currentMonth)
+    .filter((t) => t.type === "income" && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === new Date().getFullYear())
     .reduce((sum, t) => sum + t.amount, 0)
 
   const monthlyExpenses = transactions
-    .filter((t) => t.type === "expense" && new Date(t.date).getMonth() === currentMonth)
+    .filter((t) => t.type === "expense" && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === new Date().getFullYear())
     .reduce((sum, t) => sum + t.amount, 0)
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.limit, 0)

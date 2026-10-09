@@ -1,4 +1,3 @@
-"use client"
 import { useState } from "react"
 import type { MonthlyData } from "../utils/MonthlyStorage"
 import type { MonthlyHistoryModalProps } from "../utils/type"

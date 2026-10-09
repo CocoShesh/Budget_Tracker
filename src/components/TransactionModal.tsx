@@ -1,248 +1,212 @@
-"use client"
-import type React from "react"
-import { useState, useEffect } from "react"
-import { expenseCategories, type TransactionModalProps } from "../utils/type"
+import { useState, type FormEvent } from "react";
+import Dialog from "./Dialog";
+import {
+  expenseCategories,
+  incomeCategories,
+  type Account,
+  type Budget,
+  type Transaction,
+} from "../utils/type";
+import { localDate, positiveAmount, validDate } from "../utils/ledger";
 
-
-
-function formatPHP(amount: number) {
-  return amount.toLocaleString("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  })
+interface Props {
+  accounts: Account[];
+  budgets: Budget[];
+  onSubmit: (
+    transaction: Omit<Transaction, "id"> & { hasBudget: boolean },
+  ) => void;
+  onClose: () => void;
+  transaction?: Transaction;
+  initialType?: "income" | "expense";
 }
-
-export default function TransactionModal({ accounts, budgets, onSubmit, onClose }: TransactionModalProps) {
-  const [amount, setAmount] = useState("")
-  const [category, setCategory] = useState("")
-  const [description, setDescription] = useState("")
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
-  const [accountId, setAccountId] = useState("")
-
-  const selectedBudget = budgets.find((budget) => budget.category === category)
-  const hasBudget = !!selectedBudget
-
-  const remainingBudget = selectedBudget ? selectedBudget.limit - selectedBudget.spent : 0
-  const expenseAmount = Number.parseFloat(amount) || 0
-  const willExceedBudget = hasBudget && expenseAmount > remainingBudget
-
-  useEffect(() => {
-    if (!hasBudget && accounts.length > 0 && !accountId) {
-      setAccountId(accounts[0].id)
+export default function TransactionModal({
+  accounts,
+  budgets,
+  onSubmit,
+  onClose,
+  transaction,
+  initialType = "expense",
+}: Props) {
+  const [type, setType] = useState(transaction?.type ?? initialType);
+  const [amount, setAmount] = useState(
+    transaction ? String(transaction.amount) : "",
+  );
+  const [category, setCategory] = useState(transaction?.category ?? "");
+  const [description, setDescription] = useState(
+    transaction?.description ?? "",
+  );
+  const [date, setDate] = useState(transaction?.date ?? localDate());
+  const [accountId, setAccountId] = useState(
+    transaction?.accountId ?? accounts[0]?.id ?? "",
+  );
+  const [error, setError] = useState("");
+  const legacy = !!transaction?.hasBudget && !transaction.accountId;
+  const categories = [
+    ...new Set([
+      ...(type === "income" ? incomeCategories : expenseCategories),
+      ...(category ? [category] : []),
+    ]),
+  ];
+  const budget =
+    type === "expense"
+      ? budgets.find((b) => b.category === category)
+      : undefined;
+  const title = transaction
+    ? "Edit transaction"
+    : type === "income"
+      ? "Add Income"
+      : "Add Expense";
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const parsed = positiveAmount(Number(amount));
+      if (!category || !description.trim() || !validDate(date))
+        throw new Error("Complete the category, description, and date.");
+      if (!accountId && (!legacy || type === "income"))
+        throw new Error("Choose an account for this transaction.");
+      onSubmit({
+        type,
+        amount: parsed,
+        category,
+        description: description.trim(),
+        date,
+        accountId,
+        hasBudget: !!budget || (legacy && !accountId),
+      });
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to save this transaction.",
+      );
     }
-  }, [hasBudget, accounts, accountId])
-
-  useEffect(() => {
-    if (hasBudget) {
-      setAccountId("")
-    }
-  }, [hasBudget])
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!amount || !category || !description) return
-    if (!hasBudget && !accountId) return
-
-    onSubmit({
-      type: "expense",
-      amount: Number.parseFloat(amount),
-      category,
-      description,
-      date,
-      accountId: hasBudget ? "" : accountId, 
-      hasBudget, 
-    })
-
-    setAmount("")
-    setCategory("")
-    setDescription("")
-    setAccountId("")
-  }
-
+  };
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
+    <Dialog title={title} onClose={onClose}>
+      <section className="form-panel">
+        <header className="form-heading">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Add Expense</h2>
-            <p className="text-sm text-gray-600 mt-1">Track your spending and stay within budget</p>
+            <h2>{title}</h2>
+            <p>Account balances and budgets update together.</p>
           </div>
           <button
+            type="button"
+            className="icon-button"
+            aria-label="Close transaction form"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            ×
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Amount (PHP)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+        </header>
+        <form onSubmit={submit} className="form-fields">
+          <label>
+            Type
+            <select
+              value={type}
+              onChange={(event) => {
+                setType(event.target.value as typeof type);
+                setCategory("");
+              }}
+            >
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+          <div className="form-grid">
+            <label>
+              Amount (PHP)
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="0.00"
+              />
+            </label>
+            <label>
+              Date
               <input
                 type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 required
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
               />
-            </div>
+            </label>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+          <label>
+            Category
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
               required
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
             >
-              <option value="">Select expense category</option>
-              {expenseCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat} {budgets.find((b) => b.category === cat) ? "💰" : ""}
+              <option value="">Choose a category</option>
+              {categories.map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Description
+            <input
+              required
+              maxLength={240}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder={
+                type === "income"
+                  ? "e.g. Monthly salary"
+                  : "e.g. Weekly groceries"
+              }
+            />
+          </label>
+          <label>
+            Account
+            <select
+              required={!legacy || type === "income"}
+              value={accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+            >
+              {legacy && <option value="">Legacy budget-only entry</option>}
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </select>
-
-            {category && (
-              <div className="mt-2">
-                {hasBudget ? (
-                  <div
-                    className={`p-3 rounded-lg border ${willExceedBudget ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div
-                          className={`w-2 h-2 rounded-full mr-2 ${willExceedBudget ? "bg-red-500" : "bg-green-500"}`}
-                        ></div>
-                        <span className={`text-sm font-medium ${willExceedBudget ? "text-red-700" : "text-green-700"}`}>
-                          Budget Category
-                        </span>
-                      </div>
-                      <span className={`text-sm ${willExceedBudget ? "text-red-600" : "text-green-600"}`}>
-                        ₱{formatPHP(remainingBudget).replace("₱", "")} remaining
-                      </span>
-                    </div>
-                    {willExceedBudget && expenseAmount > 0 && (
-                      <p className="text-xs text-red-600 mt-1">
-                        ⚠️ This expense will exceed your budget by ₱
-                        {formatPHP(expenseAmount - remainingBudget).replace("₱", "")}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-600 mt-1">
-                      💰 This expense will be deducted from your "{category}" budget
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full mr-2 bg-blue-500"></div>
-                      <span className="text-sm font-medium text-blue-700">No Budget Set</span>
-                    </div>
-                    <p className="text-xs text-blue-600 mt-1">
-                      💳 This expense will be deducted directly from your selected account
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {!hasBudget && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Account
-                <span className="text-red-500 ml-1">*</span>
-              </label>
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
-                required={!hasBudget}
-              >
-                <option value="">Select account</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                {account.bankName ? `(${account.bankName})` : ""} - {formatPHP(account.balance)}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                The expense amount will be deducted from this account's balance
-              </p>
-            </div>
+          </label>
+          <p className="form-note">
+            {budget
+              ? `Counts toward your ${budget.category} budget. The money comes from the selected account.`
+              : "This transaction updates the selected account balance."}
+          </p>
+          {legacy && (
+            <p className="form-note">
+              This older entry had no funding account. Keep it budget-only, or
+              select an account to apply its full amount to that balance.
+            </p>
           )}
-
-          {hasBudget && (
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <div className="flex items-center">
-                <svg className="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-700">Account Selection Not Required</span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Since this category has a budget, the expense will be tracked against your budget allocation rather than
-                a specific account.
-              </p>
-            </div>
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
           )}
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-            <textarea
-              placeholder="What did you spend on? (e.g., Lunch at McDonald's, Gas for car)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-              rows={3}
-              required
-            />
-          </div>
-
-          <div className="flex gap-3 pt-6">
+          <div className="form-actions">
             <button
               type="button"
+              className="button-secondary"
               onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className={`flex-1 text-white py-3 px-4 rounded-lg transition-colors font-medium shadow-lg ${
-                willExceedBudget ? "bg-orange-600 hover:bg-orange-700" : "bg-red-600 hover:bg-red-700"
-              }`}
-            >
-              {willExceedBudget ? "Add Expense (Over Budget)" : "Add Expense"}
+            <button className="button-primary" type="submit">
+              Save transaction
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  )
+      </section>
+    </Dialog>
+  );
 }

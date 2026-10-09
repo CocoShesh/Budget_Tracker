@@ -1,102 +1,131 @@
-"use client"
-import type React from "react"
-import { useState } from "react"
-import { accountTypes, colors, philippineBanks } from "../utils/data"
-import type { Account, AccountModalProps } from "../utils/type"
+import Dialog from "./Dialog";
+import type React from "react";
+import { useState } from "react";
+import { accountTypes, colors, philippineBanks } from "../utils/data";
+import type { Account, AccountModalProps } from "../utils/type";
 
 interface EnhancedAccountModalProps extends AccountModalProps {
-  accounts: Account[] // Add existing accounts prop
+  accounts: Account[]; // Add existing accounts prop
 }
 
-function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps) {
-  const [name, setName] = useState("")
-  const [type, setType] = useState("checking")
-  const [balance, setBalance] = useState("")
-  const [color, setColor] = useState("bg-blue-500")
-  const [bankName, setBankName] = useState("")
-  const [errors, setErrors] = useState<Record<string, string>>({})
+function AccountModal({
+  onSubmit,
+  onClose,
+  accounts,
+}: EnhancedAccountModalProps) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState("checking");
+  const [balance, setBalance] = useState("");
+  const [color, setColor] = useState("bg-blue-500");
+  const [bankName, setBankName] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newErrors: Record<string, string> = {}
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = "Account name is required"
+      newErrors.name = "Account name is required";
     }
 
     if (name.trim()) {
-      const isDuplicate = accounts.some((account) => account.name.toLowerCase() === name.trim().toLowerCase())
+      const isDuplicate = accounts.some(
+        (account) => account.name.toLowerCase() === name.trim().toLowerCase(),
+      );
       if (isDuplicate) {
-        newErrors.name = "An account with this name already exists"
+        newErrors.name = "An account with this name already exists";
       }
     }
 
     if (bankName && type) {
-      const isDuplicateBankType = accounts.some((account) => account.bankName === bankName && account.type === type)
+      const isDuplicateBankType = accounts.some(
+        (account) => account.bankName === bankName && account.type === type,
+      );
       if (isDuplicateBankType) {
-        newErrors.bankName = `You already have a ${type} account with ${bankName}`
+        newErrors.bankName = `You already have a ${type} account with ${bankName}`;
       }
     }
 
     if (!balance.trim()) {
-      newErrors.balance = "Balance is required"
+      newErrors.balance = "Balance is required";
     } else {
-      const balanceValue = Number.parseFloat(balance)
+      const balanceValue = Number(balance);
       if (isNaN(balanceValue)) {
-        newErrors.balance = "Please enter a valid amount"
+        newErrors.balance = "Please enter a valid amount";
       }
     }
 
-    setErrors(newErrors)
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      onSubmit({
-        name: name.trim(),
-        type,
-        balance: Number.parseFloat(balance),
-        color,
-        bankName,
-      })
+      try {
+        onSubmit({
+          name: name.trim(),
+          type,
+          balance: Number(balance),
+          color,
+          bankName,
+        });
+      } catch (error) {
+        setErrors({
+          name:
+            error instanceof Error ? error.message : "Unable to save account.",
+        });
+        return;
+      }
 
-      setName("")
-      setType("checking")
-      setBalance("")
-      setColor("bg-blue-500")
-      setBankName("")
-      setErrors({})
+      setName("");
+      setType("checking");
+      setBalance("");
+      setColor("bg-blue-500");
+      setBankName("");
+      setErrors({});
     }
-  }
+  };
 
   const handleChange = (field: string, value: string) => {
-    if (field === "name") setName(value)
-    else if (field === "type") setType(value)
-    else if (field === "balance") setBalance(value)
-    else if (field === "bankName") setBankName(value)
+    if (field === "name") setName(value);
+    else if (field === "type") setType(value);
+    else if (field === "balance") setBalance(value);
+    else if (field === "bankName") setBankName(value);
 
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-  }
+  };
 
-  const existingAccountNames = accounts.map((account) => account.name)
+  const existingAccountNames = accounts.map((account) => account.name);
   const existingBankAccounts = accounts
     .filter((account) => account.bankName)
-    .map((account) => `${account.bankName} (${account.type})`)
+    .map((account) => `${account.bankName} (${account.type})`);
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <Dialog title="Add Account" onClose={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Add Account</h2>
-            <p className="text-sm text-gray-600 mt-1">Create a new account to track your finances</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Create a new account to track your finances
+            </p>
           </div>
           <button
+            aria-label="Close add account form"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -117,12 +146,18 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
               }`}
               required
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            <p className="text-xs text-gray-500 mt-1">Choose a unique name to identify this account</p>
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Choose a unique name to identify this account
+            </p>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Name</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Bank Name
+            </label>
             <select
               value={bankName}
               onChange={(e) => handleChange("bankName", e.target.value)}
@@ -137,8 +172,12 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                 </option>
               ))}
             </select>
-            {errors.bankName && <p className="text-red-500 text-sm mt-1">{errors.bankName}</p>}
-            <p className="text-xs text-gray-500 mt-1">Optional: Select your bank for better organization</p>
+            {errors.bankName && (
+              <p className="text-red-500 text-sm mt-1">{errors.bankName}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Optional: Select your bank for better organization
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -165,7 +204,9 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">₱</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                  ₱
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -178,12 +219,16 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                   required
                 />
               </div>
-              {errors.balance && <p className="text-red-500 text-sm mt-1">{errors.balance}</p>}
+              {errors.balance && (
+                <p className="text-red-500 text-sm mt-1">{errors.balance}</p>
+              )}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Color Theme</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Color Theme
+            </label>
             <div className="flex flex-wrap gap-3 mt-2">
               {colors.map((colorOption) => (
                 <button
@@ -199,7 +244,9 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Choose a color to easily identify this account</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Choose a color to easily identify this account
+            </p>
           </div>
 
           {/* Show existing accounts info */}
@@ -220,11 +267,15 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                   />
                 </svg>
                 <div className="flex-1">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">Existing Accounts</h4>
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    Existing Accounts
+                  </h4>
                   <div className="space-y-2">
                     {existingAccountNames.length > 0 && (
                       <div>
-                        <p className="text-xs text-blue-700 mb-1">Account names:</p>
+                        <p className="text-xs text-blue-700 mb-1">
+                          Account names:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {existingAccountNames.map((accountName) => (
                             <span
@@ -239,7 +290,9 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                     )}
                     {existingBankAccounts.length > 0 && (
                       <div>
-                        <p className="text-xs text-blue-700 mb-1">Bank accounts:</p>
+                        <p className="text-xs text-blue-700 mb-1">
+                          Bank accounts:
+                        </p>
                         <div className="flex flex-wrap gap-1">
                           {existingBankAccounts.map((bankAccount) => (
                             <span
@@ -259,9 +312,11 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
           )}
 
           {/* Preview section */}
-          {name && balance && !isNaN(Number.parseFloat(balance)) && (
+          {name && balance && !isNaN(Number(balance)) && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-green-900 mb-2">Preview</h4>
+              <h4 className="text-sm font-medium text-green-900 mb-2">
+                Preview
+              </h4>
               <div className="flex items-center space-x-3">
                 <div className={`w-4 h-4 rounded-full ${color}`} />
                 <div className="flex-1">
@@ -269,7 +324,9 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                   <p className="text-sm text-green-700">
                     {bankName && `${bankName} • `}
                     {accountTypes.find((t) => t.value === type)?.label} • ₱
-                    {Number.parseFloat(balance).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                    {Number(balance).toLocaleString("en-PH", {
+                      minimumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
               </div>
@@ -293,10 +350,13 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
                 />
               </svg>
               <div>
-                <h4 className="text-sm font-medium text-green-900">Account Tip</h4>
+                <h4 className="text-sm font-medium text-green-900">
+                  Account Tip
+                </h4>
                 <p className="text-sm text-green-700 mt-1">
-                  Use descriptive names like "Emergency Fund" or "Daily Expenses" to easily identify your accounts. You
-                  can always edit account details later.
+                  Use descriptive names like "Emergency Fund" or "Daily
+                  Expenses" to easily identify your accounts. You can always
+                  edit account details later.
                 </p>
               </div>
             </div>
@@ -312,7 +372,11 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || !balance.trim() || Object.keys(errors).length > 0}
+              disabled={
+                !name.trim() ||
+                !balance.trim() ||
+                Object.keys(errors).length > 0
+              }
               className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add Account
@@ -320,8 +384,8 @@ function AccountModal({ onSubmit, onClose, accounts }: EnhancedAccountModalProps
           </div>
         </form>
       </div>
-    </div>
-  )
+    </Dialog>
+  );
 }
 
-export default AccountModal
+export default AccountModal;

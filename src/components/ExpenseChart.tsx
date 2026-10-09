@@ -1,4 +1,3 @@
-"use client"
 
 import { useMemo } from "react"
 import type { ExpenseChartProps } from "../utils/type"
@@ -15,7 +14,7 @@ const formatPHP = (amount: number): string => {
 const ExpenseChart  = ({ transactions }:ExpenseChartProps) => {
   const expenseData = useMemo(() => {
     const currentMonth = new Date().getMonth()
-    const expenses = transactions.filter((t) => t.type === "expense" && new Date(t.date).getMonth() === currentMonth)
+    const expenses = transactions.filter((t) => t.type === "expense" && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === new Date().getFullYear())
 
     const categoryTotals = expenses.reduce(
       (acc, transaction) => {

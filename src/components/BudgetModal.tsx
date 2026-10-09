@@ -1,40 +1,63 @@
-"use client"
-import type React from "react"
-import { useState } from "react"
-import { categories, type BudgetModalProps } from "../utils/type"
-
-
+import Dialog from "./Dialog";
+import type React from "react";
+import { useState } from "react";
+import { categories, type BudgetModalProps } from "../utils/type";
 
 function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
-  const [category, setCategory] = useState("")
-  const [limit, setLimit] = useState("")
+  const [category, setCategory] = useState("");
+  const [limit, setLimit] = useState("");
+  const [error, setError] = useState("");
 
-  const availableCategories = categories.filter((cat) => !budgets.some((budget) => budget.category === cat))
+  const availableCategories = categories.filter(
+    (cat) => !budgets.some((budget) => budget.category === cat),
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!category || !limit) {
-      return
+      return;
     }
-    onSubmit(category, Number.parseFloat(limit))
-     setCategory("")
-    setLimit("")
-  }
+    try {
+      if (!Number.isFinite(Number(limit)) || Number(limit) <= 0)
+        throw new Error("Enter a positive budget limit.");
+      onSubmit(category, Number(limit));
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Unable to save budget.",
+      );
+      return;
+    }
+    setCategory("");
+    setLimit("");
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <Dialog title="Set Budget" onClose={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Set Budget</h2>
-            <p className="text-sm text-gray-600 mt-1">Set spending limits for your expense categories</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Set spending limits for your expense categories
+            </p>
           </div>
           <button
+            aria-label="Close set budget form"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -55,12 +78,16 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <h3 className="text-lg font-semibold text-green-900 mb-2">All Categories Have Budgets!</h3>
+              <h3 className="text-lg font-semibold text-green-900 mb-2">
+                All Categories Have Budgets!
+              </h3>
               <p className="text-sm text-green-700 mb-4">
-                You've successfully set budgets for all available expense categories.
+                You've successfully set budgets for all available expense
+                categories.
               </p>
               <p className="text-xs text-green-600">
-                You can edit existing budgets from the dashboard or delete a budget to create a new one.
+                You can edit existing budgets from the dashboard or delete a
+                budget to create a new one.
               </p>
             </div>
             <button
@@ -72,6 +99,11 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <p role="alert" className="form-error">
+                {error}
+              </p>
+            )}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Category
@@ -91,7 +123,8 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                {availableCategories.length} of {categories.length} categories available
+                {availableCategories.length} of {categories.length} categories
+                available
               </p>
             </div>
 
@@ -107,6 +140,7 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                 <input
                   type="number"
                   step="0.01"
+                  min="0.01"
                   placeholder="5000.00"
                   value={limit}
                   onChange={(e) => setLimit(e.target.value)}
@@ -114,7 +148,9 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Set your monthly spending limit for this category</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Set your monthly spending limit for this category
+              </p>
             </div>
 
             {budgets.length > 0 && (
@@ -134,9 +170,12 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                     />
                   </svg>
                   <div>
-                    <h4 className="text-sm font-medium text-blue-900">Existing Budgets</h4>
+                    <h4 className="text-sm font-medium text-blue-900">
+                      Existing Budgets
+                    </h4>
                     <p className="text-sm text-blue-700 mt-1">
-                      You already have budgets set for: {budgets.map((b) => b.category).join(", ")}
+                      You already have budgets set for:{" "}
+                      {budgets.map((b) => b.category).join(", ")}
                     </p>
                   </div>
                 </div>
@@ -159,10 +198,12 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
                   />
                 </svg>
                 <div>
-                  <h4 className="text-sm font-medium text-green-900">Budget Tip</h4>
+                  <h4 className="text-sm font-medium text-green-900">
+                    Budget Tip
+                  </h4>
                   <p className="text-sm text-green-700 mt-1">
-                    Start with realistic amounts based on your past spending. You can always adjust budgets later from
-                    the dashboard.
+                    Start with realistic amounts based on your past spending.
+                    You can always adjust budgets later from the dashboard.
                   </p>
                 </div>
               </div>
@@ -186,8 +227,8 @@ function BudgetModal({ budgets, onSubmit, onClose }: BudgetModalProps) {
           </form>
         )}
       </div>
-    </div>
-  )
+    </Dialog>
+  );
 }
 
-export default BudgetModal
+export default BudgetModal;

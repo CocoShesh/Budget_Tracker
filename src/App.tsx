@@ -1,302 +1,274 @@
-"use client"
-import { useState, useEffect } from "react"
-import Dashboard from "./components/Dashboard"
-import TransactionModal from "./components/TransactionModal"
-import AccountModal from "./components/AccountModal"
-import BudgetModal from "./components/BudgetModal"
+import { useRef, useState, type ChangeEvent } from "react";
+import Dashboard from "./components/Dashboard";
+import TransactionModal from "./components/TransactionModal";
+import AccountModal from "./components/AccountModal";
+import BudgetModal from "./components/BudgetModal";
+import {
+  budgetsForMonth,
+  deleteAccount,
+  deleteTransaction,
+  emptyLedger,
+  monthKey,
+  saveAccount,
+  saveBudget,
+  saveTransaction,
+  monthlyHistory,
+  type Ledger,
+} from "./utils/ledger";
+import {
+  legacyKeys,
+  loadLedger,
+  parseLedger,
+  persistLedger,
+  rawBackup,
+  STORAGE_KEY,
+} from "./utils/storage";
 
-interface Transaction {
-  id: string
-  type: "income" | "expense"
-  amount: number
-  category: string
-  description: string
-  date: string
-  accountId: string
-  hasBudget?: boolean // New optional field for smart budget logic
+function initialData() {
+  try {
+    return {
+      ...loadLedger(localStorage),
+      raw: localStorage.getItem(STORAGE_KEY),
+    };
+  } catch {
+    return {
+      ledger: emptyLedger(),
+      error:
+        "Browser storage is unavailable. Enable storage to save your budget.",
+      raw: null,
+    };
+  }
 }
-
-interface Account {
-  id: string
-  name: string
-  type: string
-  balance: number
-  color: string
-  bankName?: string
+function download(name: string, value: unknown) {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-interface Budget {
-  id: string
-  category: string
-  limit: number
-  spent: number
-}
-
-function App() {
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [budgets, setBudgets] = useState<Budget[]>([])
-  const [activeModal, setActiveModal] = useState<string | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
+export default function App() {
+  const [initial] = useState(initialData);
+  const [ledger, setLedger] = useState(initial.ledger);
+  const [storageError, setStorageError] = useState(initial.error);
+  const [message, setMessage] = useState("");
+  const [modal, setModal] = useState<string | null>(null);
+  const latest = useRef(ledger);
+  const lastSaved = useRef(initial.raw);
+  const importInput = useRef<HTMLInputElement>(null);
+  function commit(change: (current: Ledger) => Ledger) {
     try {
-      const savedTransactions = localStorage.getItem("transactions")
-      const savedAccounts = localStorage.getItem("accounts")
-      const savedBudgets = localStorage.getItem("budgets")
-
-      if (savedTransactions) {
-        setTransactions(JSON.parse(savedTransactions))
-      } else {
-        const sampleTransactions: Transaction[] = [
-          {
-            id: "1",
-            type: "income",
-            amount: 50000,
-            category: "Salary",
-            description: "Monthly salary",
-            date: "2024-01-01",
-            accountId: "1",
-          },
-          {
-            id: "2",
-            type: "expense",
-            amount: 1500,
-            category: "Food & Dining",
-            description: "Grocery shopping",
-            date: "2024-01-15",
-            accountId: "1",
-            hasBudget: true,
-          },
-        ]
-        setTransactions(sampleTransactions)
-      }
-
-      if (savedAccounts) {
-        setAccounts(JSON.parse(savedAccounts))
-      } else {
-        const sampleAccounts: Account[] = [
-          {
-            id: "1",
-            name: "Main Account",
-            type: "checking",
-            balance: 48500,
-            color: "bg-blue-500",
-            bankName: "Sample Bank",
-          },
-        ]
-        setAccounts(sampleAccounts)
-      }
-
-      if (savedBudgets) {
-        setBudgets(JSON.parse(savedBudgets))
-      } else {
-        const sampleBudgets: Budget[] = [
-          { id: "1", category: "Food & Dining", limit: 10000, spent: 1500 },
-          { id: "2", category: "Transportation", limit: 5000, spent: 0 },
-          { id: "3", category: "Entertainment", limit: 3000, spent: 0 },
-        ]
-        setBudgets(sampleBudgets)
-      }
+      if (storageError)
+        throw new Error(
+          "Resolve the storage warning before making changes. Your original data has been preserved.",
+        );
+      if (localStorage.getItem(STORAGE_KEY) !== lastSaved.current)
+        throw new Error(
+          "Your data changed in another tab. Reload this page before editing.",
+        );
+      const next = change(latest.current);
+      persistLedger(localStorage, next);
+      lastSaved.current = localStorage.getItem(STORAGE_KEY);
+      latest.current = next;
+      setLedger(next);
+      setMessage("Changes saved on this device.");
     } catch (error) {
-      console.error("Error loading data from localStorage:", error)
-    } finally {
-      setIsLoaded(true)
+      const text =
+        error instanceof Error
+          ? error.message
+          : "Unable to save. Export a backup and check browser storage.";
+      setMessage(text);
+      throw new Error(text);
     }
-  }, [])
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem("transactions", JSON.stringify(transactions))
-      } catch (error) {
-        console.error("Error saving transactions to localStorage:", error)
-      }
+  }
+  const run = (change: (current: Ledger) => Ledger) => {
+    try {
+      commit(change);
+    } catch {
+      /* An announced message preserves the existing state. */
     }
-  }, [transactions, isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem("accounts", JSON.stringify(accounts))
-      } catch (error) {
-        console.error("Error saving accounts to localStorage:", error)
-      }
+  };
+  const backup = () => {
+    try {
+      download(
+        "tipid-track-backup.json",
+        storageError
+          ? { originalStorage: rawBackup(localStorage) }
+          : latest.current,
+      );
+      setMessage(
+        "Backup downloaded. Keep it private; it contains your financial records.",
+      );
+    } catch {
+      setMessage("Unable to read browser storage for a backup.");
     }
-  }, [accounts, isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem("budgets", JSON.stringify(budgets))
-      } catch (error) {
-        console.error("Error saving budgets to localStorage:", error)
-      }
-    }
-  }, [budgets, isLoaded])
-
-  const addTransaction = (transaction: Omit<Transaction, "id"> & { hasBudget: boolean }) => {
-    const newTransaction = {
-      ...transaction,
-      id: Date.now().toString(),
-    }
-    setTransactions((prev) => [newTransaction, ...prev])
-
-    if (transaction.type === "expense") {
-      if (transaction.hasBudget) {
-        setBudgets((prev) =>
-          prev.map((budget) =>
-            budget.category === transaction.category ? { ...budget, spent: budget.spent + transaction.amount } : budget,
-          ),
+  };
+  const restore = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      if (file.size > 5 * 1024 * 1024)
+        throw new Error("Choose a backup smaller than 5 MB.");
+      const next = parseLedger(JSON.parse(await file.text()));
+      if (
+        !window.confirm(
+          "Replace your current data with this backup? Export your current records first if you need to keep them.",
         )
-      } else {
-        setAccounts((prev) =>
-          prev.map((account) =>
-            account.id === transaction.accountId
-              ? { ...account, balance: account.balance - transaction.amount }
-              : account,
-          ),
-        )
-      }
-    } else if (transaction.type === "income") {
-      setAccounts((prev) =>
-        prev.map((account) =>
-          account.id === transaction.accountId
-            ? { ...account, balance: account.balance + transaction.amount }
-            : account,
-        ),
       )
+        return;
+      commit(() => next);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to import this backup.",
+      );
     }
-    setActiveModal(null)
-  }
-
-  const addAccount = (account: Omit<Account, "id">) => {
-    const newAccount = {
-      ...account,
-      id: Date.now().toString(),
-    }
-    setAccounts((prev) => [...prev, newAccount])
-    setActiveModal(null)
-  }
-
-  const setBudget = (category: string, limit: number) => {
-    const existingBudget = budgets.find((b) => b.category === category)
-    if (existingBudget) {
-      setBudgets((prev) => prev.map((b) => (b.category === category ? { ...b, limit } : b)))
-    } else {
-      const newBudget: Budget = {
-        id: Date.now().toString(),
-        category,
-        limit,
-        spent: 0,
-      }
-      setBudgets((prev) => [...prev, newBudget])
-    }
-    setActiveModal(null)
-  }
-
-  const clearAllData = () => {
-    if (window.confirm("Are you sure you want to clear all data?")) {
-      setTransactions([])
-      setAccounts([])
-      setBudgets([])
-      try {
-        localStorage.removeItem("transactions")
-        localStorage.removeItem("accounts")
-        localStorage.removeItem("budgets")
-      } catch (error) {
-        console.error("Error clearing localStorage:", error)
-      }
-    }
-  }
-
-  const handleDeleteTransaction = (id: string) => {
-    const transaction = transactions.find((t) => t.id === id)
-    if (transaction) {
-      if (transaction.type === "expense") {
-        if (transaction.hasBudget) {
-          setBudgets((prev) =>
-            prev.map((budget) =>
-              budget.category === transaction.category
-                ? { ...budget, spent: Math.max(0, budget.spent - transaction.amount) }
-                : budget,
-            ),
-          )
-        } else {
-          setAccounts((prev) =>
-            prev.map((account) =>
-              account.id === transaction.accountId
-                ? { ...account, balance: account.balance + transaction.amount }
-                : account,
-            ),
-          )
-        }
-      } else if (transaction.type === "income") {
-        setAccounts((prev) =>
-          prev.map((account) =>
-            account.id === transaction.accountId
-              ? { ...account, balance: account.balance - transaction.amount }
-              : account,
-          ),
-        )
-      }
-    }
-    setTransactions((prev) => prev.filter((t) => t.id !== id))
-  }
-
-  const handleDeleteAccount = (id: string) => {
-    setAccounts((prev) => prev.filter((a) => a.id !== id))
-  }
-
-  const handleDeleteBudget = (id: string) => {
-    setBudgets((prev) => prev.filter((b) => b.id !== id))
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-lg text-gray-600">Loading your budget tracker...</div>
-        </div>
-      </div>
+  };
+  const clear = () => {
+    if (
+      !window.confirm(
+        "Clear all accounts, transactions, budgets, and monthly history on this device? Export a backup first. This cannot be undone.",
+      )
     )
-  }
-
+      return;
+    try {
+      if (localStorage.getItem(STORAGE_KEY) !== lastSaved.current)
+        throw new Error(
+          "Your data changed in another tab. Reload before clearing.",
+        );
+      const next = emptyLedger();
+      persistLedger(localStorage, next);
+      lastSaved.current = localStorage.getItem(STORAGE_KEY);
+      legacyKeys.forEach((key) => localStorage.removeItem(key));
+      latest.current = next;
+      setLedger(next);
+      setStorageError(null);
+      setMessage("All tracker data cleared from this device.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to clear browser storage.",
+      );
+    }
+  };
+  const budgets = budgetsForMonth(ledger, monthKey());
   return (
-    <div className="min-h-screen flex items-center justify-center w-full bg-gray-50">
-      <Dashboard
-        transactions={transactions}
-        accounts={accounts}
-        budgets={budgets}
-        onOpenModal={setActiveModal}
-        onClearData={clearAllData}
-        onDeleteTransaction={handleDeleteTransaction}
-        onDeleteAccount={handleDeleteAccount}
-        onDeleteBudget={handleDeleteBudget}
-        setTransactions={setTransactions}
-        setAccounts={setAccounts}
-        setBudgets={setBudgets}
-      />
-
-      {activeModal === "transaction" && (
-        <TransactionModal
-          accounts={accounts}
-          budgets={budgets}
-          onSubmit={addTransaction}
-          onClose={() => setActiveModal(null)}
+    <>
+      <a className="skip-link" href="#transactions">
+        Skip to transactions
+      </a>
+      <main className="app-shell">
+        <div className="storage-toolbar">
+          <span>Tipid Track · saved on this device</span>
+          <div>
+            <button onClick={backup}>Export backup</button>
+            <button
+              disabled={!!storageError}
+              onClick={() => importInput.current?.click()}
+            >
+              Import backup
+            </button>
+          </div>
+        </div>
+        <input
+          type="file"
+          accept="application/json,.json"
+          ref={importInput}
+          onChange={restore}
+          hidden
+          aria-label="Import budget backup"
         />
-      )}
-
-      {activeModal === "account" && (
-        <AccountModal accounts={accounts} onSubmit={addAccount} onClose={() => setActiveModal(null)} />
-      )}
-
-      {activeModal === "budget" && (
-        <BudgetModal budgets={budgets} onSubmit={setBudget} onClose={() => setActiveModal(null)} />
-      )}
-    </div>
-  )
+        {storageError && (
+          <section role="alert" className="storage-warning">
+            <h2>Your saved data needs attention</h2>
+            <p>{storageError}</p>
+            <p>
+              Nothing has been overwritten. Export the original data before
+              resetting, or reload after repairing browser storage.
+            </p>
+            <div>
+              <button onClick={backup}>Export original data</button>
+              <button onClick={() => window.location.reload()}>Reload</button>
+              <button onClick={clear}>Reset tracker</button>
+            </div>
+          </section>
+        )}
+        <p className="save-status" role="status" aria-live="polite">
+          {message ||
+            "Your records stay in this browser. Export a backup before switching devices."}
+        </p>
+        <Dashboard
+          accounts={ledger.accounts}
+          budgets={budgets}
+          transactions={ledger.transactions}
+          history={monthlyHistory(ledger)}
+          onOpenModal={(name) => {
+            if (!storageError) setModal(name);
+          }}
+          onClearData={clear}
+          onDeleteTransaction={(id) =>
+            run((current) => deleteTransaction(current, id))
+          }
+          onDeleteAccount={(id) => run((current) => deleteAccount(current, id))}
+          onDeleteBudget={(id) =>
+            run((current) => ({
+              ...current,
+              budgets: current.budgets.filter((b) => b.id !== id),
+            }))
+          }
+          onUpdateTransaction={(t) =>
+            commit((current) => saveTransaction(current, t, t.id))
+          }
+          onUpdateAccount={(a) => commit((current) => saveAccount(current, a))}
+          onUpdateBudget={(b) => commit((current) => saveBudget(current, b))}
+        />
+        {(modal === "transaction" || modal === "income") && (
+          <TransactionModal
+            initialType={modal === "income" ? "income" : "expense"}
+            accounts={ledger.accounts}
+            budgets={budgets}
+            onClose={() => setModal(null)}
+            onSubmit={(input) => {
+              commit((current) => saveTransaction(current, input));
+              setModal(null);
+            }}
+          />
+        )}
+        {modal === "account" && (
+          <AccountModal
+            accounts={ledger.accounts}
+            onClose={() => setModal(null)}
+            onSubmit={(input) => {
+              commit((current) =>
+                saveAccount(current, { ...input, id: crypto.randomUUID() }),
+              );
+              setModal(null);
+            }}
+          />
+        )}
+        {modal === "budget" && (
+          <BudgetModal
+            budgets={budgets}
+            onClose={() => setModal(null)}
+            onSubmit={(category, limit) => {
+              commit((current) =>
+                saveBudget(current, {
+                  id: crypto.randomUUID(),
+                  category,
+                  limit,
+                  spent: 0,
+                }),
+              );
+              setModal(null);
+            }}
+          />
+        )}
+      </main>
+    </>
+  );
 }
-
-export default App
