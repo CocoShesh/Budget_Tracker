@@ -6,6 +6,18 @@ Tipid Track is a personal budget tracker for Philippine pesos. Organize your acc
 
 [Open Tipid Track](https://tipidtrack.netlify.app/) · [Report a bug](https://github.com/CocoShesh/Budget_Tracker/issues) · [Contributing](CONTRIBUTING.md)
 
+## Preview
+
+![Tipid Track desktop dashboard showing account balances, monthly budgets, and recent transactions](docs/images/dashboard-desktop.png)
+
+<details>
+<summary><strong>See the mobile layout</strong></summary>
+<br>
+<img src="docs/images/dashboard-mobile.png" alt="Tipid Track mobile dashboard with stacked account, budget, and transaction cards" width="320">
+</details>
+
+*Screenshots show fictional demo records from the updated app.*
+
 ## Features
 
 - **Account tracking:** manage cash, bank, and other account balances with consistent transaction calculations.
